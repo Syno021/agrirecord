@@ -11,6 +11,7 @@ import { Colors, iconWellBg } from '@/constants/colors';
 import { useActivities } from '@/hooks/useActivities';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
+import { formatGreeting } from '@/lib/greeting';
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
@@ -40,7 +41,7 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.greeting}>Good morning, {firstName} 👋</Text>
+        <Text style={styles.greeting}>{formatGreeting(firstName)} 👋</Text>
         <Text style={styles.dateLine}>{dateLine}</Text>
 
         <View style={styles.statGrid}>

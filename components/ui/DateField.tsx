@@ -1,5 +1,13 @@
-import { useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
@@ -35,20 +43,175 @@ function fromYmd(ymd?: string): Date | null {
   return date;
 }
 
-export function DateField({ label, required, hint, error, value, onChange, placeholder }: Props) {
-  const [show, setShow] = useState(false);
-  const borderColor = error ? Colors.danger : Colors.border;
+/** Web: native HTML date input (reliable in browsers). */
+function WebDateInput({
+  value,
+  onChange,
+  borderColor,
+  hasError,
+}: {
+  value?: string;
+  onChange: (next: string) => void;
+  borderColor: string;
+  hasError: boolean;
+}) {
+  const inputStyle: ViewStyle & Record<string, string | number> = {
+    flex: 1,
+    minHeight: 52,
+    width: '100%',
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 15,
+    color: Colors.foreground,
+    backgroundColor: Colors.muted,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor,
+    borderStyle: 'solid',
+    paddingLeft: 44,
+    paddingRight: 16,
+    paddingTop: 14,
+    paddingBottom: 14,
+    outlineStyle: 'none',
+    boxSizing: 'border-box',
+    cursor: 'pointer',
+  };
 
+  return (
+    <View style={[styles.row, { borderColor }, hasError && styles.rowError, styles.webRow]}>
+      <Ionicons
+        name="calendar-outline"
+        size={20}
+        color={Colors.mutedForeground}
+        style={styles.webIcon}
+      />
+      {/* @ts-expect-error — RN Web renders a real <input> */}
+      <input
+        type="date"
+        value={value?.trim() || ''}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+          const next = e.target.value;
+          if (next) onChange(next);
+        }}
+        style={inputStyle}
+        aria-label="Date"
+      />
+    </View>
+  );
+}
+
+/** iOS: picker inside a modal with Done (works inside bottom sheets). */
+function IOSDatePickerModal({
+  visible,
+  value,
+  onClose,
+  onConfirm,
+}: {
+  visible: boolean;
+  value: Date;
+  onClose: () => void;
+  onConfirm: (date: Date) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    if (visible) setDraft(value);
+  }, [visible, value]);
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.modalBar}>
+            <Pressable onPress={onClose} hitSlop={12}>
+              <Text style={styles.modalCancel}>Cancel</Text>
+            </Pressable>
+            <Text style={styles.modalTitle}>Select date</Text>
+            <Pressable onPress={() => onConfirm(draft)} hitSlop={12}>
+              <Text style={styles.modalDone}>Done</Text>
+            </Pressable>
+          </View>
+          <DateTimePicker
+            value={draft}
+            mode="date"
+            display="spinner"
+            onChange={(_: DateTimePickerEvent, date?: Date) => {
+              if (date) setDraft(date);
+            }}
+            style={styles.iosPicker}
+          />
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+export function DateField({ label, required, hint, error, value, onChange, placeholder }: Props) {
+  const [showNative, setShowNative] = useState(false);
+  const [iosOpen, setIosOpen] = useState(false);
+  const borderColor = error ? Colors.danger : Colors.border;
   const selected = useMemo(() => fromYmd(value) ?? new Date(), [value]);
   const display = value?.trim() ? value.trim() : placeholder ?? 'YYYY-MM-DD';
 
-  const onPickerChange = (event: DateTimePickerEvent, date?: Date) => {
-    if (Platform.OS !== 'ios') setShow(false);
-    if (event.type === 'dismissed') return;
+  const onAndroidChange = (event: DateTimePickerEvent, date?: Date) => {
+    setShowNative(false);
+    if (event.type === 'dismissed' || event.type === 'neutralButtonPressed') return;
     if (!date) return;
     onChange(toYmd(date));
   };
 
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.wrapper}>
+        {label ? (
+          <Text style={styles.label}>
+            {label}
+            {required ? ' *' : ''}
+          </Text>
+        ) : null}
+        {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+        <WebDateInput
+          value={value}
+          onChange={onChange}
+          borderColor={borderColor}
+          hasError={!!error}
+        />
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+      </View>
+    );
+  }
+
+  if (Platform.OS === 'ios') {
+    return (
+      <View style={styles.wrapper}>
+        {label ? (
+          <Text style={styles.label}>
+            {label}
+            {required ? ' *' : ''}
+          </Text>
+        ) : null}
+        {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+        <Pressable
+          onPress={() => setIosOpen(true)}
+          style={[styles.row, { borderColor }, error && styles.rowError]}
+        >
+          <Ionicons name="calendar-outline" size={20} color={Colors.mutedForeground} />
+          <Text style={[styles.value, !value?.trim() && styles.placeholder]}>{display}</Text>
+        </Pressable>
+        <IOSDatePickerModal
+          visible={iosOpen}
+          value={selected}
+          onClose={() => setIosOpen(false)}
+          onConfirm={(date) => {
+            onChange(toYmd(date));
+            setIosOpen(false);
+          }}
+        />
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+      </View>
+    );
+  }
+
+  // Android: system dialog when showNative is true
   return (
     <View style={styles.wrapper}>
       {label ? (
@@ -58,24 +221,21 @@ export function DateField({ label, required, hint, error, value, onChange, place
         </Text>
       ) : null}
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
-
       <Pressable
-        onPress={() => setShow(true)}
+        onPress={() => setShowNative(true)}
         style={[styles.row, { borderColor }, error && styles.rowError]}
       >
         <Ionicons name="calendar-outline" size={20} color={Colors.mutedForeground} />
         <Text style={[styles.value, !value?.trim() && styles.placeholder]}>{display}</Text>
       </Pressable>
-
-      {show ? (
+      {showNative ? (
         <DateTimePicker
           value={selected}
           mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onPickerChange}
+          display="default"
+          onChange={onAndroidChange}
         />
       ) : null}
-
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
@@ -108,6 +268,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 10,
   },
+  webRow: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  webIcon: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 1,
+    pointerEvents: 'none',
+  },
   rowError: {},
   value: {
     flex: 1,
@@ -122,5 +294,43 @@ const styles = StyleSheet.create({
     color: Colors.danger,
     marginTop: 6,
   },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  modalSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 24,
+  },
+  modalBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 16,
+    color: Colors.foreground,
+  },
+  modalCancel: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 16,
+    color: Colors.mutedForeground,
+  },
+  modalDone: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 16,
+    color: Colors.primary,
+  },
+  iosPicker: {
+    height: 220,
+    width: '100%',
+  },
 });
-

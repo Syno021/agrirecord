@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { CloudSun, Leaf, Map, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { formatGreeting } from '@/lib/greeting';
 
 const pageVariants = {
   initial: { opacity: 0, scale: 0.98, y: 8 },
@@ -32,7 +33,7 @@ export default function Dashboard() {
       transition={pageTransition}
     >
       <h1 className="font-display text-3xl font-bold text-brand-primary">
-        Good morning, James 👋
+        {formatGreeting('James')} 👋
       </h1>
       <p className="mt-1 text-sm text-brand-muted-foreground">
         Thursday, 15 May · Nairobi
