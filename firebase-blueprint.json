@@ -1,0 +1,186 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and authentication data",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["farmer", "admin"] },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "role", "isActive"]
+    },
+    "Farm": {
+      "title": "Farm",
+      "description": "Farm management data",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "sizeHectares": { "type": "number" },
+        "description": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "collaborators": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["ownerId", "name", "isActive"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Record of farm activity",
+      "type": "object",
+      "properties": {
+        "farmId": { "type": "string" },
+        "recordedBy": { "type": "string" },
+        "farmOwnerId": { "type": "string" },
+        "type": { "type": "string", "enum": ["planting", "fertilising", "pesticide", "harvesting", "irrigation", "other"] },
+        "date": { "type": "string", "format": "date-time" },
+        "cropName": { "type": "string" },
+        "productUsed": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "notes": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["farmId", "recordedBy", "type", "date", "cropName", "isActive"]
+    },
+    "Roadmap": {
+      "title": "Roadmap",
+      "description": "AI-generated planting plan",
+      "type": "object",
+      "properties": {
+        "farmId": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "title": { "type": "string" },
+        "cropName": { "type": "string" },
+        "plantingEnvironment": { "type": "string", "enum": ["outdoor", "indoor", "greenhouse"] },
+        "status": { "type": "string", "enum": ["draft", "active", "completed", "archived"] },
+        "aiGeneratedPlan": { "type": "string" },
+        "promptUsed": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["farmId", "createdBy", "title", "cropName", "plantingEnvironment", "status", "isActive"]
+    },
+    "RoadmapStep": {
+      "title": "RoadmapStep",
+      "description": "Actionable task within a Roadmap",
+      "type": "object",
+      "properties": {
+        "roadmapId": { "type": "string" },
+        "stepNumber": { "type": "number" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "isCompleted": { "type": "boolean" },
+        "category": { "type": "string", "enum": ["preparation", "planting", "fertilising", "watering", "pest_control", "harvesting"] }
+      },
+      "required": ["roadmapId", "stepNumber", "title", "dueDate", "isCompleted", "category"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "A Reminder to the user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "farmId": { "type": "string" },
+        "roadmapStepId": { "type": "string" },
+        "type": { "type": "string", "enum": ["weather", "harvest", "fertilise", "water", "pesticide", "custom"] },
+        "message": { "type": "string" },
+        "scheduledAt": { "type": "string", "format": "date-time" },
+        "isSent": { "type": "boolean" },
+        "isRead": { "type": "boolean" }
+      },
+      "required": ["userId", "farmId", "type", "message", "scheduledAt", "isSent", "isRead"]
+    },
+    "CourseGuide": {
+      "title": "CourseGuide",
+      "description": "Admin uploaded guide for AI",
+      "type": "object",
+      "properties": {
+        "uploadedBy": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "fileType": { "type": "string", "enum": ["pdf", "text"] },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["uploadedBy", "title", "content", "isActive"]
+    },
+    "InventoryItem": {
+      "title": "InventoryItem",
+      "description": "Track smart inventory items per user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["seeds", "fertilizer", "protection", "materials", "harvested", "other"] },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "minThreshold": { "type": "number" },
+        "costPerUnit": { "type": "number" },
+        "farmId": { "type": "string" },
+        "notes": { "type": "string" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "category", "quantity", "unit", "minThreshold", "costPerUnit", "farmId", "lastUpdated"]
+    },
+    "InventoryAudit": {
+      "title": "InventoryAudit",
+      "description": "Audit logs of inventory additions and drawdowns",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "itemId": { "type": "string" },
+        "itemName": { "type": "string" },
+        "type": { "type": "string", "enum": ["addition", "drawdown", "reconciliation"] },
+        "changeAmount": { "type": "number" },
+        "reason": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "itemId", "itemName", "type", "changeAmount", "reason", "timestamp"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "User",
+      "description": "User collection"
+    },
+    "farms": {
+      "schema": "Farm",
+      "description": "Farms"
+    },
+    "activityLogs": {
+      "schema": "ActivityLog",
+      "description": "Activity logs for farms"
+    },
+    "roadmaps": {
+      "schema": "Roadmap",
+      "description": "Planting roadmaps"
+    },
+    "roadmapSteps": {
+      "schema": "RoadmapStep",
+      "description": "Steps within roadmaps"
+    },
+    "reminders": {
+      "schema": "Reminder",
+      "description": "User reminders"
+    },
+    "courseGuides": {
+      "schema": "CourseGuide",
+      "description": "Course guides for AI"
+    },
+    "inventoryItems": {
+      "schema": "InventoryItem",
+      "description": "Stock inventory items"
+    },
+    "inventoryAudits": {
+      "schema": "InventoryAudit",
+      "description": "Inventory movement audit trail"
+    }
+  }
+}
